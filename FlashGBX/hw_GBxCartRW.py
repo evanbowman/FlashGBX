@@ -113,7 +113,7 @@ class GbxDevice:
 	FAST_READ = False
 	SKIPPING = False
 	BAUDRATE = 1000000
-	MAX_BUFFER_LEN = 0x2000
+	MAX_BUFFER_LEN = 0x1000
 	DEVICE_TIMEOUT = 0.5
 	WRITE_DELAY = False
 	READ_ERRORS = 0
@@ -143,13 +143,13 @@ class GbxDevice:
 
 		for i in range(0, len(ports)):
 			try:
-				dev = serial.Serial(ports[i], self.BAUDRATE, timeout=0.1)
+				dev = serial.Serial(ports[i], self.BAUDRATE, timeout=1)
 				self.DEVICE = dev
 				if not self.LoadFirmwareVersion() and max_baud >= 1700000:
 					dev.close()
 					self.BAUDRATE = 115200
-					self.MAX_BUFFER_LEN = 0x2000
-					dev = serial.Serial(ports[i], self.BAUDRATE, timeout=0.1)
+					self.MAX_BUFFER_LEN = 0x1000
+					dev = serial.Serial(ports[i], self.BAUDRATE, timeout=1)
 					self.DEVICE = dev
 					if not self.LoadFirmwareVersion():
 						dev.close()
@@ -163,7 +163,7 @@ class GbxDevice:
 					#self.BAUDRATE = 115200
 					#dev.close()
 					self.ChangeBaudRate(baudrate=1700000)
-					dev = serial.Serial(ports[i], self.BAUDRATE, timeout=0.1)
+					dev = serial.Serial(ports[i], self.BAUDRATE, timeout=1)
 					self.DEVICE = dev
 
 				dprint("Firmware information:", self.FW)
@@ -261,7 +261,7 @@ class GbxDevice:
 			self._write(self.DEVICE_CMD["OFW_USART_1_7M_SPEED"])
 			self.Close()
 			self.BAUDRATE = baudrate
-			self.MAX_BUFFER_LEN = 0x2000
+			self.MAX_BUFFER_LEN = 0x1000
 		elif baudrate == 1000000:
 			self._write(self.DEVICE_CMD["OFW_USART_1_0M_SPEED"])
 			self.Close()
@@ -457,10 +457,10 @@ class GbxDevice:
 		if wait: return self.wait_for_ack()
 
 	def _read(self, count):
-		if self.DEVICE.in_waiting > 1000: dprint("in_waiting = {:d} bytes".format(self.DEVICE.in_waiting))
+		if self.DEVICE.in_waiting > 1000: print("in_waiting = {:d} bytes".format(self.DEVICE.in_waiting))
 		buffer = self.DEVICE.read(count)
 		if len(buffer) != count:
-			dprint("Warning: Received {:d} byte(s) instead of the expected {:d} byte(s)".format(len(buffer), count))
+			print("Warning: Received {:d} byte(s) instead of the expected {:d} byte(s)".format(len(buffer), count))
 			self.READ_ERRORS += 1
 			while self.DEVICE.in_waiting > 0:
 				self.DEVICE.reset_input_buffer()
@@ -521,7 +521,7 @@ class GbxDevice:
 				return self.ReadROM(address, length)
 
 	def _cart_write(self, address, value, flashcart=False, sram=False):
-		dprint("Writing to cartridge: 0x{:X} = 0x{:X} (flashcart={:s}, sram={:s})".format(address, value & 0xFF, str(flashcart), str(sram)))
+		print("Writing to cartridge: 0x{:X} = 0x{:X} (flashcart={:s}, sram={:s})".format(address, value & 0xFF, str(flashcart), str(sram)))
 		if self.MODE == "DMG":
 			if flashcart:
 				buffer = bytearray([self.DEVICE_CMD["DMG_FLASH_WRITE_BYTE"]])
@@ -562,7 +562,7 @@ class GbxDevice:
 			buffer.extend(struct.pack("B", 1 if flashcart else 0))
 		buffer.extend(struct.pack("B", num))
 		for i in range(0, num):
-			dprint("Writing to cartridge: 0x{:X} = 0x{:X} ({:d} of {:d})".format(commands[i][0], commands[i][1], i+1, num))
+			print("Writing to cartridge: 0x{:X} = 0x{:X} ({:d} of {:d})".format(commands[i][0], commands[i][1], i+1, num))
 			if self.MODE == "AGB" and flashcart:
 				buffer.extend(struct.pack(">I", commands[i][0] >> 1))
 			else:
@@ -946,7 +946,7 @@ class GbxDevice:
 
 	def ReadROM(self, address, length, skip_init=False, max_length=64):
 		num = math.ceil(length / max_length)
-		dprint("Reading 0x{:X} bytes from cartridge ROM at 0x{:X} in {:d} iteration(s)".format(length, address, num))
+		print("Reading 0x{:X} bytes from cartridge ROM at 0x{:X} in {:d} iteration(s)".format(length, address, num))
 		if length > max_length: length = max_length
 
 		print("read rom {} {} {} {}".format(address, length, skip_init, max_length))
@@ -969,7 +969,7 @@ class GbxDevice:
 			self._write(self.DEVICE_CMD[command])
 			temp = self._read(length)
 			print("read " + str(len(temp)) + " bytes")
-			print(repr(temp))
+			print(temp.hex())
 			if isinstance(temp, int): temp = bytearray([temp])
 			if temp is False or len(temp) != length: return bytearray()
 			buffer += temp
@@ -1981,7 +1981,7 @@ class GbxDevice:
 			start_bank = math.floor(buffer_pos / rom_bank_size)
 			end_bank = math.ceil((buffer_pos + args["verify_len"]) / rom_bank_size)
 			rom_banks = end_bank
-		dprint("start_address=0x{:X}, end_address=0x{:X}, start_bank=0x{:X}, rom_banks=0x{:X}".format(start_address, end_address, start_bank, rom_banks))
+		print("start_address=0x{:X}, end_address=0x{:X}, start_bank=0x{:X}, rom_banks=0x{:X}".format(start_address, end_address, start_bank, rom_banks))
 
 		bank = start_bank
 
